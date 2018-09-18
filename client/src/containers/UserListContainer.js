@@ -11,7 +11,7 @@ class UserListContainer extends React.Component {
         };
         this.search = this.search.bind(this);
     }
-    
+
     async search(params) {
         try {
             const users = await ApiService.getUsers(params);

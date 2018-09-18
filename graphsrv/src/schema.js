@@ -4,13 +4,13 @@ import find from 'lodash/find';
 import filter from 'lodash/filter';
 import sumBy from 'lodash/sumBy';
 import {
-GraphQLInt,
-        GraphQLBoolean,
-        GraphQLString,
-        GraphQLList,
-        GraphQLObjectType,
-        GraphQLNonNull,
-        GraphQLSchema,
+    GraphQLInt,
+    GraphQLBoolean,
+    GraphQLString,
+    GraphQLList,
+    GraphQLObjectType,
+    GraphQLNonNull,
+    GraphQLSchema,
 } from 'graphql';
 
 const UserType = new GraphQLObjectType({
@@ -59,41 +59,61 @@ const TodoQueryRootType = new GraphQLObjectType({
     name: 'TodoAppSchema',
     description: 'Root Todo App Schema',
     fields: () => ({
-            users: {
-                args: {
-                    first_name: {type: GraphQLString},
-                    last_name: {type: GraphQLString},
-                    department: {type: GraphQLString},
-                    country: {type: GraphQLString},
-                },
-                type: new GraphQLList(UserType),
-                description: 'List of Users',
-                resolve: (parent, args) => {
-                    if (Object.keys(args).length) {
-                        return filter(Users, args);
-                    }
-                    return Users;
-                }
+        users: {
+            args: {
+                first_name: {type: GraphQLString},
+                last_name: {type: GraphQLString},
+                department: {type: GraphQLString},
+                country: {type: GraphQLString},
             },
-            todos: {
-                args: {
-                    userId: {type: GraphQLInt},
-                    completed: {type: GraphQLBoolean},
-                },
-                type: new GraphQLList(TodoType),
-                description: 'List of Todos',
-                resolve: (parent, args) => {
-                    if (Object.keys(args).length) {
-                        return filter(Todos, args);
-                    }
-                    return Todos;
+            type: new GraphQLList(UserType),
+            description: 'List of Users',
+            resolve: (parent, args) => {
+                if (Object.keys(args).length) {
+                    return filter(Users, args);
                 }
+                return Users;
             }
-        })
+        },
+        todos: {
+            args: {
+                userId: {type: GraphQLInt},
+                completed: {type: GraphQLBoolean},
+            },
+            type: new GraphQLList(TodoType),
+            description: 'List of Todos',
+            resolve: (parent, args) => {
+                if (Object.keys(args).length) {
+                    return filter(Todos, args);
+                }
+                return Todos;
+            }
+        }
+    })
+});
+
+const TodoMutation = new GraphQLObjectType({
+    name: 'TodoMutations',
+    description: 'writing to the todos or users',
+    fields: () => ({
+        updateCompletionStatus: {
+            args: {
+                id: {type: GraphQLInt},
+            },
+            type: TodoType,
+            description: 'Change status of single Todo',
+            resolve: (parent, args) => {
+                const todo = find(Todos, todo => todo.id === args.id);
+                todo.completed = !todo.completed;
+                return todo;
+            }
+        }
+    })
 });
 
 const schema = new GraphQLSchema({
     query: TodoQueryRootType,
+    mutation: TodoMutation,
 });
 
 export default schema;
