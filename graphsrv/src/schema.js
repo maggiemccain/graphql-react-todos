@@ -14,10 +14,11 @@ import {
     GraphQLID,
 } from 'graphql';
 import config from '../config.js';
+
 var mongoose = require('mongoose');
 
 var Schema = mongoose.Schema;
-var ObjectId = Schema.ObjectId;
+var ObjectId = mongoose.Types.ObjectId;
 
 var username = config.USERNAME;
 var pword = config.PWORD;
@@ -182,7 +183,7 @@ const TodoMutation = new GraphQLObjectType({
             args: {
                 title: {type: GraphQLString},
                 first_name: {type: GraphQLString},
-                // last_name: {type: GraphQLString},
+                userId: {type: GraphQLString},
             },
             type: TodoType,
             description: 'Create new todo',
@@ -190,7 +191,7 @@ const TodoMutation = new GraphQLObjectType({
                 var newTodo = new TODO({
                     title: args.title,
                     completed: false,
-                    user: USER.findOne({first_name: args.first_name}).select('id') // not working
+                    user: USER.findById(new ObjectId(args.userId))
                 })
                 newTodo.id = newTodo._id
                 return new Promise((resolve, reject) => {
