@@ -2,7 +2,6 @@ import express from 'express';
 import schema from './schema';
 import graphqlHTTP from 'express-graphql';
 const port = 3001;
-
 const app = express();
 const dev = process.env.NODE_ENV === 'development';
 

@@ -11,13 +11,59 @@ import {
     GraphQLObjectType,
     GraphQLNonNull,
     GraphQLSchema,
+    GraphQLID,
 } from 'graphql';
+import config from '../config.js';
+var mongoose = require('mongoose');
+
+var Schema = mongoose.Schema;
+var ObjectId = Schema.ObjectId;
+
+var username = config.USERNAME;
+var pword = config.PWORD;
+
+// database
+
+// Mongoose Schema definition
+var TODO = mongoose.model('Todo', new Schema({
+    id: mongoose.Schema.Types.ObjectId,
+    title: String,
+    completed: Boolean,
+    user: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
+  }));
+
+var USER = mongoose.model('User', new Schema({
+    id: mongoose.Schema.Types.ObjectId,
+    first_name: String,
+    last_name: String,
+    email: String,
+    gender: String,
+    department: String,
+    country: String,
+    todo_count: Number,
+    todos: [{type: mongoose.Schema.Types.ObjectId, ref: 'Todo'}],
+}));
+
+
+
+//Set up default mongoose connection
+// HIDE USERNAME AND PASSWORD
+var mongoDB = `mongodb://${username}:${pword}@ds261072.mlab.com:61072/graphql_todos`;
+mongoose.connect(mongoDB, (error) => {
+    if (error) console.error(error)
+    else console.log('mongo connected')
+});
+// Get Mongoose to use the global promise library
+mongoose.Promise = global.Promise;
+//Get the default connection
+var db = mongoose.connection;
+// graphql
 
 const UserType = new GraphQLObjectType({
     name: 'User',
     description: 'Users in company',
     fields: () => ({
-            id: {type: new GraphQLNonNull(GraphQLInt)},
+            id: {type: new GraphQLNonNull(GraphQLID)},
             first_name: {type: new GraphQLNonNull(GraphQLString)},
             last_name: {type: new GraphQLNonNull(GraphQLString)},
             email: {type: GraphQLString},
@@ -43,7 +89,7 @@ const TodoType = new GraphQLObjectType({
     name: 'Todo',
     description: 'Task for user',
     fields: () => ({
-            id: {type: new GraphQLNonNull(GraphQLInt)},
+            id: {type: new GraphQLNonNull(GraphQLID)},
             title: {type: GraphQLString},
             completed: {type: new GraphQLNonNull(GraphQLBoolean)},
             user: {
@@ -69,10 +115,7 @@ const TodoQueryRootType = new GraphQLObjectType({
             type: new GraphQLList(UserType),
             description: 'List of Users',
             resolve: (parent, args) => {
-                if (Object.keys(args).length) {
-                    return filter(Users, args);
-                }
-                return Users;
+                return USER.find({})
             }
         },
         todos: {
@@ -107,7 +150,57 @@ const TodoMutation = new GraphQLObjectType({
                 todo.completed = !todo.completed;
                 return todo;
             }
-        }
+        },
+        addUser: {
+            args: {
+                first_name: {type: new GraphQLNonNull(GraphQLString)},
+                last_name: {type: new GraphQLNonNull(GraphQLString)},
+                email: {type: GraphQLString},
+                gender: {type: GraphQLString},
+            },
+            type: UserType,
+            description: 'Create new user',
+            resolve: (parent, args) => {
+                var newUser = new USER({
+                  first_name: args.first_name,
+                  last_name: args.last_name,
+                  email: args.email,
+                  gender: args.gender,
+                  department: 'Legal',
+                  country: 'United States',
+                })
+                newUser.id = newUser._id
+                return new Promise((resolve, reject) => {
+                  newUser.save(function (err) {
+                    if (err) reject(err)
+                    else resolve(newUser)
+                  })
+                })
+            }
+        },
+        addTodo: {
+            args: {
+                title: {type: GraphQLString},
+                first_name: {type: GraphQLString},
+                // last_name: {type: GraphQLString},
+            },
+            type: TodoType,
+            description: 'Create new todo',
+            resolve: (parent, args) => {
+                var newTodo = new TODO({
+                    title: args.title,
+                    completed: false,
+                    user: USER.findOne({first_name: args.first_name}).select('id') // not working
+                })
+                newTodo.id = newTodo._id
+                return new Promise((resolve, reject) => {
+                  newTodo.save(function (err) {
+                    if (err) reject(err)
+                    else resolve(newTodo)
+                  })
+                })
+            }
+        },
     })
 });
 
