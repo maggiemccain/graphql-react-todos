@@ -12,6 +12,7 @@ import {
     GraphQLNonNull,
     GraphQLSchema,
     GraphQLID,
+    GraphQLInputObjectType,
 } from 'graphql';
 import config from '../config.js';
 
@@ -48,7 +49,6 @@ var USER = mongoose.model('User', new Schema({
 
 
 //Set up default mongoose connection
-// HIDE USERNAME AND PASSWORD
 var mongoDB = `mongodb://${username}:${pword}@ds261072.mlab.com:61072/graphql_todos`;
 mongoose.connect(mongoDB, (error) => {
     if (error) console.error(error)
@@ -102,6 +102,13 @@ const TodoType = new GraphQLObjectType({
         })
 });
 
+const TodoInput = new GraphQLInputObjectType({
+    name: 'UpdateTodo',
+    fields: () => ({
+        title: {type: GraphQLString},
+    })
+});
+
 const TodoQueryRootType = new GraphQLObjectType({
     name: 'TodoAppSchema',
     description: 'Root Todo App Schema',
@@ -115,7 +122,7 @@ const TodoQueryRootType = new GraphQLObjectType({
             },
             type: new GraphQLList(UserType),
             description: 'List of Users',
-            resolve: (parent, args) => {
+            resolve: () => {
                 return USER.find({})
             }
         },
@@ -126,11 +133,8 @@ const TodoQueryRootType = new GraphQLObjectType({
             },
             type: new GraphQLList(TodoType),
             description: 'List of Todos',
-            resolve: (parent, args) => {
-                if (Object.keys(args).length) {
-                    return filter(Todos, args);
-                }
-                return Todos;
+            resolve: () => {
+                return TODO.find({})
             }
         }
     })
@@ -191,7 +195,7 @@ const TodoMutation = new GraphQLObjectType({
                 var newTodo = new TODO({
                     title: args.title,
                     completed: false,
-                    user: USER.findById(new ObjectId(args.userId))
+                    user: USER.findOne({_id: new ObjectId(args.userId)})
                 })
                 newTodo.id = newTodo._id
                 return new Promise((resolve, reject) => {
@@ -199,6 +203,44 @@ const TodoMutation = new GraphQLObjectType({
                     if (err) reject(err)
                     else resolve(newTodo)
                   })
+                })
+            }
+        },
+        // toggleTodoCompletionStatus: {
+        //     args: {
+        //         todo: {type: TodoType},
+        //     },
+        //     type: TodoType,
+        //     description: 'toggle completion status of specific todo',
+        //     resolve: (parent, args) => {
+        //         const todo = args.todo;
+        //         todo.completed = !todo.completed;
+        //         return new Promise((resolve, reject) => {
+        //           TODO.findOneAndUpdate(function (err) {
+        //             if (err) reject(err)
+        //             else resolve(newTodo)
+        //           })
+        //         })
+        //     }
+        // },
+        updateTodoTitle: {
+            args: {
+                todoInput: {type: TodoInput},
+                title: {type: GraphQLString},
+            },
+            type: TodoType,
+            description: 'toggle completion status of specific todo',
+            resolve: (parent, args) => {
+                return new Promise((resolve, reject) => {
+                    TODO.findOneAndUpdate(
+                        {title: args.todoInput.title},
+                        {title: args.title},
+                        {new: true},
+                        function(err, doc) {
+                            if (err) reject(err)
+                            else resolve(doc)
+                        }
+                    );
                 })
             }
         },
