@@ -26,16 +26,13 @@ var pword = config.PWORD;
 
 // database
 
-// Mongoose Schema definition
-var TODO = mongoose.model('Todo', new Schema({
-    id: mongoose.Schema.Types.ObjectId,
+// Schemas
+var TodoSchema = new Schema({
     title: String,
-    completed: Boolean,
-    user: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
-  }));
+    completed: Boolean 
+})
 
-var USER = mongoose.model('User', new Schema({
-    id: mongoose.Schema.Types.ObjectId,
+var UserSchema = new Schema({
     first_name: String,
     last_name: String,
     email: String,
@@ -43,8 +40,12 @@ var USER = mongoose.model('User', new Schema({
     department: String,
     country: String,
     todo_count: Number,
-    todos: [{type: mongoose.Schema.Types.ObjectId, ref: 'Todo'}],
-}));
+    todos: [TodoSchema]
+});
+
+var TODO = mongoose.model('Todo', TodoSchema);
+var USER = mongoose.model('User', UserSchema);
+
 
 
 
@@ -187,22 +188,23 @@ const TodoMutation = new GraphQLObjectType({
             args: {
                 title: {type: GraphQLString},
                 first_name: {type: GraphQLString},
-                userId: {type: GraphQLString},
+                userId: {type: GraphQLString }
             },
             type: TodoType,
             description: 'Create new todo',
             resolve: (parent, args) => {
-                var newTodo = new TODO({
-                    title: args.title,
-                    completed: false,
-                    user: USER.findOne({_id: new ObjectId(args.userId)})
-                })
-                newTodo.id = newTodo._id
-                return new Promise((resolve, reject) => {
-                  newTodo.save(function (err) {
-                    if (err) reject(err)
-                    else resolve(newTodo)
-                  })
+                USER.findById(args.userId, function(err, user) {
+                    console.log(user);
+                    user.todos.push({
+                        title: args.title,
+                        completed: args.completed || false
+                    });
+                    return new Promise((resolve, reject) => {
+                        user.save(function (err) {
+                            if (err) reject(err.message);
+                            resolve(user);
+                        })
+                    });
                 })
             }
         },
